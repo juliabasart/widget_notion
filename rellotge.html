@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flip Clock</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body, #app {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* FONDO CLARO */
+    body {
+      background: #f5f5f5;
+    }
+
+    #app {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+    }
+
+    /* RELOJ MÁS PEQUEÑO */
+    .flipClock {
+      display: flex;
+      gap: 10px;
+    }
+
+    .flipUnitContainer {
+      position: relative;
+      width: 55px;
+      height: 44px;
+      perspective: 150px;
+      perspective-origin: 50% 50%;
+      background: #ffffff;
+      border-radius: 5px;
+      box-shadow: 0 3px 8px rgba(0,0,0,.12);
+      overflow: hidden;
+    }
+
+    .upperCard, .lowerCard {
+      position: relative;
+      height: 50%;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,.08);
+      background: linear-gradient(to bottom, #ffffff, #f7f7f7);
+    }
+
+    .upperCard {
+      align-items: flex-end;
+      border-radius: 5px 5px 0 0;
+      border-bottom-width: 0.5px;
+    }
+
+    .lowerCard {
+      align-items: flex-start;
+      border-radius: 0 0 5px 5px;
+      border-top-width: 0.5px;
+    }
+
+    .upperCard span {
+      transform: translateY(50%);
+    }
+
+    .lowerCard span {
+      transform: translateY(-50%);
+    }
+
+    .upperCard span,
+    .lowerCard span,
+    .flipCard span {
+      font-family: 'Droid Sans Mono', monospace;
+      font-size: 1.8em;
+      font-weight: 300;
+      color: #222;
+      line-height: 1;
+    }
+
+    /* CAPA ANIMADA */
+    .flipCard {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      overflow: hidden;
+      backface-visibility: hidden;
+      display: flex;
+      justify-content: center;
+      border: 0.5px solid rgba(0,0,0,.08);
+      background: #ffffff;
+    }
+
+    /* PARTE SUPERIOR */
+    .flipCard.fold {
+      top: 0;
+      align-items: flex-end;
+      transform-origin: 50% 100%;
+      transform: rotateX(0deg);
+      border-radius: 5px 5px 0 0;
+      border-bottom-width: 0.5px;
+      animation: fold 0.6s cubic-bezier(.455,.03,.515,.955) forwards;
+      transform-style: preserve-3d;
+    }
+
+    .flipCard.fold span {
+      transform: translateY(50%);
+    }
+
+    /* PARTE INFERIOR */
+    .flipCard.unfold {
+      top: 50%;
+      align-items: flex-start;
+      transform-origin: 50% 0%;
+      transform: rotateX(180deg);
+      border-radius: 0 0 5px 5px;
+      border-top-width: 0.5px;
+      animation: unfold 0.6s cubic-bezier(.455,.03,.515,.955) forwards;
+      transform-style: preserve-3d;
+    }
+
+    .flipCard.unfold span {
+      transform: translateY(-50%);
+    }
+
+    @keyframes fold {
+      from {
+        transform: rotateX(0deg);
+      }
+      to {
+        transform: rotateX(-180deg);
+      }
+    }
+
+    @keyframes unfold {
+      from {
+        transform: rotateX(180deg);
+      }
+      to {
+        transform: rotateX(0deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+
+    const AnimatedCard = ({ animation, digit }) => (
+      <div className={`flipCard ${animation}`}>
+        <span>{digit}</span>
+      </div>
+    );
+
+    const StaticCard = ({ position, digit }) => (
+      <div className={position}>
+        <span>{digit}</span>
+      </div>
+    );
+
+    const FlipUnitContainer = ({ digit, shuffle, unit }) => {
+      let currentDigit = digit;
+      let previousDigit = digit - 1;
+
+      const max = unit === 'hours' ? 23 : 59;
+
+      if (previousDigit < 0) previousDigit = max;
+
+      const cur = currentDigit < 10 ? `0${currentDigit}` : `${currentDigit}`;
+      const prev = previousDigit < 10 ? `0${previousDigit}` : `${previousDigit}`;
+
+      const digit1 = shuffle ? prev : cur;
+      const digit2 = !shuffle ? prev : cur;
+
+      const animation1 = shuffle ? 'fold' : 'unfold';
+      const animation2 = !shuffle ? 'fold' : 'unfold';
+
+      return (
+        <div className="flipUnitContainer">
+          <StaticCard position="upperCard" digit={cur} />
+          <StaticCard position="lowerCard" digit={prev} />
+
+          <AnimatedCard
+            digit={digit1}
+            animation={animation1}
+          />
+
+          <AnimatedCard
+            digit={digit2}
+            animation={animation2}
+          />
+        </div>
+      );
+    };
+
+    class FlipClock extends React.Component {
+
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          hours: 0,
+          hoursShuffle: true,
+
+          minutes: 0,
+          minutesShuffle: true,
+
+          seconds: 0,
+          secondsShuffle: true
+        };
+      }
+
+      componentDidMount() {
+        this.timerID = setInterval(
+          () => this.updateTime(),
+          50
+        );
+      }
+
+      componentWillUnmount() {
+        clearInterval(this.timerID);
+      }
+
+      updateTime() {
+        const time = new Date();
+
+        const hours = time.getHours();
+        const minutes = time.getMinutes();
+        const seconds = time.getSeconds();
+
+        if (hours !== this.state.hours) {
+          this.setState({
+            hours,
+            hoursShuffle: !this.state.hoursShuffle
+          });
+        }
+
+        if (minutes !== this.state.minutes) {
+          this.setState({
+            minutes,
+            minutesShuffle: !this.state.minutesShuffle
+          });
+        }
+
+        if (seconds !== this.state.seconds) {
+          this.setState({
+            seconds,
+            secondsShuffle: !this.state.secondsShuffle
+          });
+        }
+      }
+
+      render() {
+        const {
+          hours,
+          minutes,
+          seconds,
+          hoursShuffle,
+          minutesShuffle,
+          secondsShuffle
+        } = this.state;
+
+        return (
+          <div className="flipClock">
+
+            <FlipUnitContainer
+              unit="hours"
+              digit={hours}
+              shuffle={hoursShuffle}
+            />
+
+            <FlipUnitContainer
+              unit="minutes"
+              digit={minutes}
+              shuffle={minutesShuffle}
+            />
+
+            <FlipUnitContainer
+              unit="seconds"
+              digit={seconds}
+              shuffle={secondsShuffle}
+            />
+
+          </div>
+        );
+      }
+    }
+
+    ReactDOM.render(
+      <FlipClock />,
+      document.getElementById('app')
+    );
+
+  </script>
+</body>
+</html>
